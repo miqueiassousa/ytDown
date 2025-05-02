@@ -3,6 +3,21 @@
 <head>
   <meta charset="UTF-8" />
   <title>Baixar YouTube</title>
+  <style>
+    /* Estilos para a barra de progresso */
+    .progress-bar {
+      width: 100%;
+      background-color: #e0e0e0;
+      border-radius: 5px;
+    }
+
+    .progress-bar-filled {
+      height: 20px;
+      width: 0;
+      background-color: #4caf50;
+      border-radius: 5px;
+    }
+  </style>
 </head>
 <body>
   <h1>Download YouTube</h1>
@@ -21,5 +36,29 @@
 
     <button type="submit">Baixar</button>
   </form>
+
+  <!-- Barra de progresso -->
+  <h3>Progresso do download:</h3>
+  <div class="progress-bar">
+    <div id="progress-bar-filled" class="progress-bar-filled"></div>
+  </div>
+
+  <script>
+    // Inicia a conexão SSE para monitorar o progresso
+    const eventSource = new EventSource('/progress');
+    eventSource.onmessage = function(event) {
+      const data = JSON.parse(event.data);
+      const progress = data.progress;
+      const progressBar = document.getElementById('progress-bar-filled');
+
+      // Atualiza a largura da barra de progresso
+      progressBar.style.width = progress + '%';
+
+      // Se o download for 100%, fecha a conexão SSE
+      if (progress === 100) {
+        eventSource.close();
+      }
+    };
+  </script>
 </body>
 </html>

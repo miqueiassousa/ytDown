@@ -15,67 +15,83 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/index.html'));
 });
 
-// Rota de download
-app.post('/download', (req, res) => {
-  const { url, folder, format } = req.body;
+// Rota para SSE
+app.get('/progress', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
 
-  if (!url || !folder || !['mp3', 'video'].includes(format)) {
-    return res.status(400).send('URL, pasta ou formato inválido.');
-  }
+  // Envia um evento a cada segundo (progresso será enviado aqui)
+  res.flushHeaders();
 
-  const resolvedFolder = path.resolve(folder);
-  const ytDlpPath = 'C:/yt-dlp/yt-dlp.exe'; // Altere se necessário
-  const ffmpegPath = 'C:/ffmpeg/bin';       // Altere se necessário
-  const cookiesPath = 'cookies.txt';        // Certifique-se de que o arquivo está na raiz
+  res.write('data: {"progress": 0}\n\n'); // Envia inicializando progresso em 0%
 
-  const baseArgs = [
-    '--ffmpeg-location', ffmpegPath,
-    '--cookies', cookiesPath,
-    '--no-post-overwrites',
-    '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-  ];
+  const sendProgress = (percent) => {
+    res.write(`data: {"progress": ${percent}}\n\n`);
+  };
 
-  let args;
+  // Rota de download
+  app.post('/download', (req, res) => {
+    const { url, folder, format } = req.body;
 
-  if (format === 'mp3') {
-    args = [
-      ...baseArgs,
-      '-x',
-      '--audio-format', 'mp3',
-      '-o', `${resolvedFolder}/%(title)s.%(ext)s`,
-      url
-    ];
-  } else if (format === 'video') {
-    args = [
-      ...baseArgs,
-      '-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best',
-      '--merge-output-format', 'avi',
-      '-o', `${resolvedFolder}/%(title)s.avi`,
-      url
-    ];
-  }
-
-  const ytDlp = spawn(ytDlpPath, args);
-
-  ytDlp.stdout.on('data', (data) => {
-    const output = data.toString();
-    process.stdout.write(output); // Exibe a barra de progresso no terminal
-
-    // Extração de progresso (opcional para frontend via SSE/WebSocket)
-    const match = output.match(/\[download\]\s+(\d+\.\d+)%/);
-    if (match) {
-      const percent = parseFloat(match[1]);
-      console.log(`🔄 Progresso: ${percent}%`);
+    if (!url || !folder || !['mp3', 'video'].includes(format)) {
+      return res.status(400).send('URL, pasta ou formato inválido.');
     }
-  });
 
-  ytDlp.stderr.on('data', (data) => {
-    console.error(`[yt-dlp error] ${data}`);
-  });
+    const resolvedFolder = path.resolve(folder);
+    const ytDlpPath = 'C:/yt-dlp/yt-dlp.exe'; // Ajuste se necessário
+    const ffmpegPath = 'C:/ffmpeg/bin';       // Ajuste se necessário
+    const cookiesPath = 'cookies.txt';        // Certifique-se de que o arquivo está na raiz
 
-  ytDlp.on('close', (code) => {
-    console.log(`yt-dlp finalizou com código ${code}`);
-    res.sendStatus(code === 0 ? 200 : 500);
+    const baseArgs = [
+      '--ffmpeg-location', ffmpegPath,
+      '--cookies', cookiesPath,
+      '--no-post-overwrites',
+      '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+    ];
+
+    let args;
+
+    if (format === 'mp3') {
+      args = [
+        ...baseArgs,
+        '-x',
+        '--audio-format', 'mp3',
+        '-o', `${resolvedFolder}/%(title)s.%(ext)s`,
+        url
+      ];
+    } else if (format === 'video') {
+      args = [
+        ...baseArgs,
+        '-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best',
+        '--merge-output-format', 'avi',
+        '-o', `${resolvedFolder}/%(title)s.avi`,
+        url
+      ];
+    }
+
+    const ytDlp = spawn(ytDlpPath, args);
+
+    ytDlp.stdout.on('data', (data) => {
+      const output = data.toString();
+      process.stdout.write(output); // Exibe a barra de progresso no terminal
+
+      // Extração de progresso
+      const match = output.match(/\[download\]\s+(\d+\.\d+)%/);
+      if (match) {
+        const percent = parseFloat(match[1]);
+        sendProgress(percent); // Envia o progresso ao frontend
+      }
+    });
+
+    ytDlp.stderr.on('data', (data) => {
+      console.error(`[yt-dlp error] ${data}`);
+    });
+
+    ytDlp.on('close', (code) => {
+      console.log(`yt-dlp finalizou com código ${code}`);
+      res.sendStatus(code === 0 ? 200 : 500);
+    });
   });
 });
 
