@@ -19,6 +19,7 @@ function simulateProgress() {
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   output.textContent = '⏳ Iniciando download...\n';
+  output.style.color = 'black';
   progressBar.style.width = '0%';
   progressBar.textContent = '0%';
   progressBar.style.backgroundColor = '#4caf50';

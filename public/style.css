@@ -1,6 +1,14 @@
 body {
   font-family: Arial, sans-serif;
   margin: 20px;
+<<<<<<< HEAD
+=======
+  background-image: url('imagens/fundo2.jpg');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  min-height: 80vh;
+>>>>>>> desenvolvimento
 }
 
 #progress-container {
@@ -28,4 +36,10 @@ pre#output {
   padding: 1rem;
   border-radius: 5px;
   border: 1px solid #dee2e6;
+}
+
+.card {
+  background-color: rgba(0, 0, 0, 0.6); /* preto com 60% de opacidade */
+  color: white; /* texto branco para contraste */
+  border: none;
 }
