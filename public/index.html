@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Baixador de YouTube</title>
+  <link rel="stylesheet" href="style.css">
+ 
+</head>
+<body>
+  <h2>🎵 Baixar música do YouTube</h2>
+  <form id="download-form">
+    <label for="url">Link do vídeo:</label><br>
+    <input type="text" id="url" name="url" required style="width: 100%;"><br><br>
+
+    <label for="folder">Pasta de destino:</label><br>
+    <input type="text" id="folder" name="folder" value="./downloads" required style="width: 100%;"><br><br>
+
+    <button type="submit">Baixar</button>
+  </form>
+
+  <div id="progress-container">
+    <div id="progress-bar">0%</div>
+  </div>
+
+  <pre id="output"></pre>
+
+  <script src="script.js"></script>
+</body>
+</html>
