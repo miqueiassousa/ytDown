@@ -10,21 +10,19 @@ const PORT = 3000;
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Página inicial
+// Rota principal
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/index.html'));
 });
 
-// Rota para SSE
+// Rota para SSE (progresso)
 app.get('/progress', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
 
-  // Envia um evento a cada segundo (progresso será enviado aqui)
-  res.flushHeaders();
-
-  res.write('data: {"progress": 0}\n\n'); // Envia inicializando progresso em 0%
+  // Envia o progresso inicial
+  res.write('data: {"progress": 0}\n\n');
 
   const sendProgress = (percent) => {
     res.write(`data: {"progress": ${percent}}\n\n`);
@@ -41,7 +39,7 @@ app.get('/progress', (req, res) => {
     const resolvedFolder = path.resolve(folder);
     const ytDlpPath = 'C:/yt-dlp/yt-dlp.exe'; // Ajuste se necessário
     const ffmpegPath = 'C:/ffmpeg/bin';       // Ajuste se necessário
-    const cookiesPath = 'cookies.txt';        // Certifique-se de que o arquivo está na raiz
+    const cookiesPath = 'cookies.txt';        // Certifique-se de que o arquivo de cookies está na raiz do projeto
 
     const baseArgs = [
       '--ffmpeg-location', ffmpegPath,
@@ -74,13 +72,13 @@ app.get('/progress', (req, res) => {
 
     ytDlp.stdout.on('data', (data) => {
       const output = data.toString();
-      process.stdout.write(output); // Exibe a barra de progresso no terminal
+      process.stdout.write(output); // Exibe no terminal
 
       // Extração de progresso
       const match = output.match(/\[download\]\s+(\d+\.\d+)%/);
       if (match) {
         const percent = parseFloat(match[1]);
-        sendProgress(percent); // Envia o progresso ao frontend
+        sendProgress(percent); // Envia progresso para o frontend
       }
     });
 

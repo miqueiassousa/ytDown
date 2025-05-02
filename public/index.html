@@ -1,64 +1,34 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
-  <meta charset="UTF-8" />
-  <title>Baixar YouTube</title>
-  <style>
-    /* Estilos para a barra de progresso */
-    .progress-bar {
-      width: 100%;
-      background-color: #e0e0e0;
-      border-radius: 5px;
-    }
-
-    .progress-bar-filled {
-      height: 20px;
-      width: 0;
-      background-color: #4caf50;
-      border-radius: 5px;
-    }
-  </style>
+  <meta charset="UTF-8">
+  <title>Baixador de YouTube</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Download YouTube</h1>
-  <form method="POST" action="/download">
-    <label>URL do vídeo:</label><br />
-    <input type="text" name="url" required><br /><br />
+  <h2>🎵 Baixar música ou vídeo do YouTube</h2>
+  <form id="download-form">
+    <label for="url">Link do vídeo:</label><br>
+    <input type="text" id="url" name="url" required style="width: 100%;"><br><br>
 
-    <label>Pasta destino:</label><br />
-    <input type="text" name="folder" value="E:/VIDEOS" required><br /><br />
+    <label for="folder">Pasta de destino:</label><br>
+    <input type="text" id="folder" name="folder" value="./downloads" required style="width: 100%;"><br><br>
 
-    <label>Formato:</label><br />
-    <select name="format">
-      <option value="mp3">MP3 (áudio)</option>
-      <option value="video">Vídeo (AVI)</option>
-    </select><br /><br />
+    <label for="format">Formato:</label><br>
+    <select id="format" name="format">
+      <option value="mp3">MP3 (somente áudio)</option>
+      <option value="video">Vídeo</option>
+    </select><br><br>
 
     <button type="submit">Baixar</button>
   </form>
 
-  <!-- Barra de progresso -->
-  <h3>Progresso do download:</h3>
-  <div class="progress-bar">
-    <div id="progress-bar-filled" class="progress-bar-filled"></div>
+  <div id="progress-container">
+    <div id="progress-bar">0%</div>
   </div>
 
-  <script>
-    // Inicia a conexão SSE para monitorar o progresso
-    const eventSource = new EventSource('/progress');
-    eventSource.onmessage = function(event) {
-      const data = JSON.parse(event.data);
-      const progress = data.progress;
-      const progressBar = document.getElementById('progress-bar-filled');
+  <pre id="output"></pre>
 
-      // Atualiza a largura da barra de progresso
-      progressBar.style.width = progress + '%';
-
-      // Se o download for 100%, fecha a conexão SSE
-      if (progress === 100) {
-        eventSource.close();
-      }
-    };
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>
