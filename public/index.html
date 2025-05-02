@@ -3,37 +3,57 @@
 <head>
   <meta charset="UTF-8">
   <title>Baixador de YouTube</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-SgOJa3DmI69IUzQ2PVdRZhwQ+dy64/BUtbMJw1MZ8t5HZApcHrRKUc4W0kG879m7" crossorigin="anonymous">
+
 </head>
-<body>
-  <h2>🎵 Baixar do YouTube</h2>
-  <form id="download-form">
-    <label>Link do vídeo:</label><br>
-    <input type="text" id="url" name="url" required><br><br>
+<body class="bg-dark">
 
-    <label>Pasta de destino:</label><br>
-    <input type="text" id="folder" name="folder" value="./downloads" required><br><br>
+  <div class="container py-0">
+    <div class="row justify-content-center">
+      <div class="col-md-8 col-lg-6">
+        <div class="card shadow">
+          <div class="card-body">
+            <h4 class="card-title text-center mb-4"> YDown</h4>
+            <form id="download-form">
+              <div class="mb-3">
+                <label for="url" class="form-label">Link do vídeo</label>
+                <input type="text" class="form-control" id="url" name="url" required>
+              </div>
 
-    <label>Formato:</label><br>
-    <select id="format" name="format">
-      <option value="mp3">MP3 (áudio)</option>
-      <option value="video">Vídeo (AVI)</option>
-    </select><br><br>
+              <div class="mb-3">
+                <label for="folder" class="form-label">Pasta de destino</label>
+                <input type="text" class="form-control" id="folder" name="folder" value="C:/Users/mique/Music" required>
+              </div>
 
-    <label>
-      <input type="checkbox" id="playlist" name="playlist" value="1">
-      Baixar como playlist
-    </label><br><br>
+              <div class="mb-3">
+                <label for="format" class="form-label">Formato</label>
+                <select id="format" name="format" class="form-select">
+                  <option value="mp3">MP3 (áudio)</option>
+                  <option value="video">Vídeo (AVI)</option>
+                </select>
+              </div>
 
-    <button type="submit">Baixar</button>
-  </form>
+              <div class="form-check mb-1">
+                <input class="form-check-input" type="checkbox" id="playlist" name="playlist" value="1">
+                <label class="form-check-label" for="playlist">
+                  Playlist
+                </label>
+              </div>
 
-  <div id="progress-container">
-    <div id="progress-bar">0%</div>
+              <button type="submit" class="btn btn-primary w-100">⬇️ YDown</button>
+            </form>
+
+            <div id="progress-container" class="mt-2">
+              <div id="progress-bar">0%</div>
+            </div>
+
+            <pre id="output"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
-
-  <pre id="output"></pre>
 
   <script src="script.js"></script>
 </body>
