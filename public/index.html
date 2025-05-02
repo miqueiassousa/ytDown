@@ -5,7 +5,6 @@
   <title>Baixador de YouTube</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-
 </head>
 <body class="bg-dark">
 
@@ -16,17 +15,17 @@
           <div class="card-body">
             <h4 class="card-title text-center mb-4"> YDown</h4>
             <form id="download-form">
-              <div class="mb-3">
-                <label for="url" class="form-label">Link do vídeo</label>
+              <div class="mb-2">
+                <label for="url" class="form-label">Link</label>
                 <input type="text" class="form-control" id="url" name="url" required>
               </div>
 
-              <div class="mb-3">
+              <div class="mb-2">
                 <label for="folder" class="form-label">Pasta de destino</label>
-                <input type="text" class="form-control" id="folder" name="folder" value="C:/Users/mique/Music" required>
+                <input type="text" class="form-control" id="folder" name="folder" required>
               </div>
 
-              <div class="mb-3">
+              <div class="mb-2">
                 <label for="format" class="form-label">Formato</label>
                 <select id="format" name="format" class="form-select">
                   <option value="mp3">MP3 (áudio)</option>
@@ -56,5 +55,16 @@
   </div>
 
   <script src="script.js"></script>
+  <script>
+    // Definir a pasta de destino como a "Música" do sistema como valor padrão
+    window.onload = function () {
+      fetch('/default-folder')
+        .then(response => response.json())
+        .then(data => {
+          document.getElementById('folder').value = data.defaultFolder;
+        })
+        .catch(error => console.error('Erro ao definir pasta padrão:', error));
+    };
+  </script>
 </body>
 </html>
