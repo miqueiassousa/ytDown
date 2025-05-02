@@ -4,21 +4,27 @@
   <meta charset="UTF-8">
   <title>Baixador de YouTube</title>
   <link rel="stylesheet" href="style.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-SgOJa3DmI69IUzQ2PVdRZhwQ+dy64/BUtbMJw1MZ8t5HZApcHrRKUc4W0kG879m7" crossorigin="anonymous">
 </head>
 <body>
-  <h2>🎵 Baixar música ou vídeo do YouTube</h2>
+  <h2>🎵 Baixar do YouTube</h2>
   <form id="download-form">
-    <label for="url">Link do vídeo:</label><br>
-    <input type="text" id="url" name="url" required style="width: 100%;"><br><br>
+    <label>Link do vídeo:</label><br>
+    <input type="text" id="url" name="url" required><br><br>
 
-    <label for="folder">Pasta de destino:</label><br>
-    <input type="text" id="folder" name="folder" value="./downloads" required style="width: 100%;"><br><br>
+    <label>Pasta de destino:</label><br>
+    <input type="text" id="folder" name="folder" value="./downloads" required><br><br>
 
-    <label for="format">Formato:</label><br>
+    <label>Formato:</label><br>
     <select id="format" name="format">
-      <option value="mp3">MP3 (somente áudio)</option>
-      <option value="video">Vídeo</option>
+      <option value="mp3">MP3 (áudio)</option>
+      <option value="video">Vídeo (AVI)</option>
     </select><br><br>
+
+    <label>
+      <input type="checkbox" id="playlist" name="playlist" value="1">
+      Baixar como playlist
+    </label><br><br>
 
     <button type="submit">Baixar</button>
   </form>
