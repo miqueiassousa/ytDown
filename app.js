@@ -42,9 +42,10 @@ app.post('/download', (req, res) => {
   }
 
   // Se a flag 'playlist' NÃO for marcada, adiciona a opção --no-playlist para baixar apenas o vídeo/áudio do link único
-  if (!playlist) {
+  if (playlist !== '1') {
     args.push('--no-playlist');
   }
+
 
   // A URL do vídeo ou áudio deve ser passada por último no comando
   args.push(url);
@@ -63,61 +64,62 @@ app.post('/download', (req, res) => {
   });
 
   // Evento acionado quando o processo termina
-  ytDlp.on('close', (code) => {
+  ytDlp.on('close', async (code) => {
     if (code === 0) {
       if (format === 'video') {
         const fs = require('fs');
-        const { spawn } = require('child_process');
+        const util = require('util');
+        const readdir = util.promisify(fs.readdir);
+        const unlink = util.promisify(fs.unlink);
 
-        fs.readdir(resolvedFolder, (err, files) => {
-          if (err) {
-            console.error('Erro ao ler a pasta:', err);
-            return res.status(500).send('Erro ao acessar arquivos.');
+        try {
+          const files = await readdir(resolvedFolder);
+          const videoFiles = files.filter(f => f.endsWith('.webm') || f.endsWith('.mkv') || f.endsWith('.mp4'));
+
+          if (videoFiles.length === 0) {
+            return res.status(500).send('Nenhum arquivo de vídeo encontrado.');
           }
 
-          const inputFile = files.find(f => f.endsWith('.webm') || f.endsWith('.mkv') || f.endsWith('.mp4'));
-          if (!inputFile) {
-            return res.status(500).send('Arquivo de vídeo não encontrado.');
-          }
+          for (const inputFile of videoFiles) {
+            const inputPath = path.join(resolvedFolder, inputFile);
+            const outputPath = path.join(resolvedFolder, path.parse(inputFile).name + '.avi');
 
-          const inputPath = path.join(resolvedFolder, inputFile);
-          const outputPath = path.join(resolvedFolder, path.parse(inputFile).name + '.avi');
+            await new Promise((resolve, reject) => {
+              const ffmpeg = spawn('C:/ffmpeg/bin/ffmpeg.exe', [
+                '-i', inputPath,
+                '-vf', 'scale=854:480',
+                '-vcodec', 'libxvid',
+                '-acodec', 'libmp3lame',
+                '-b:v', '1000k',
+                '-b:a', '192k',
+                outputPath
+              ]);
 
-          const ffmpeg = spawn('C:/ffmpeg/bin/ffmpeg.exe', [
-            '-i', inputPath,
-            '-vf', 'scale=854:480',
-            '-vcodec', 'libxvid',
-            '-acodec', 'libmp3lame',
-            '-b:v', '1000k',
-            '-b:a', '192k',
-            outputPath
-          ]);
+              ffmpeg.stderr.on('data', (data) => console.error(`stderr: ${data}`));
+              ffmpeg.stdout.on('data', (data) => console.log(`stdout: ${data}`));
 
-          ffmpeg.stdout.on('data', (data) => {
-            console.log(`stdout: ${data}`);
-          });
-
-          ffmpeg.stderr.on('data', (data) => {
-            console.error(`stderr: ${data}`);
-          });
-
-          ffmpeg.on('close', (code) => {
-            if (code === 0) {
-              // ✅ Após conversão bem-sucedida, remove o arquivo original
-              fs.unlink(inputPath, (err) => {
-                if (err) {
-                  console.warn(`⚠️ Não foi possível remover o arquivo original: ${inputPath}`);
+              ffmpeg.on('close', async (code) => {
+                if (code === 0) {
+                  console.log(`✔️ Convertido: ${outputPath}`);
+                  try {
+                    await unlink(inputPath); // remove original
+                    console.log(`🗑️ Removido: ${inputPath}`);
+                  } catch (err) {
+                    console.warn(`⚠️ Falha ao remover ${inputPath}:`, err);
+                  }
+                  resolve();
                 } else {
-                  console.log(`🗑️ Arquivo original removido: ${inputPath}`);
+                  reject(new Error(`Erro ao converter: ${inputFile}`));
                 }
               });
+            });
+          }
 
-              return res.status(200).send('✅ Download e conversão concluídos com sucesso!');
-            } else {
-              return res.status(500).send('❌ Erro na conversão para AVI.');
-            }
-          });
-        });
+          return res.status(200).send('✅ Todos os vídeos foram convertidos para AVI com sucesso!');
+        } catch (err) {
+          console.error('Erro ao converter vídeos:', err);
+          return res.status(500).send('❌ Erro ao processar os vídeos.');
+        }
       } else {
         res.status(200).send('✅ Download de MP3 concluído!');
       }
@@ -125,6 +127,7 @@ app.post('/download', (req, res) => {
       res.status(500).send('❌ Erro no download com yt-dlp.');
     }
   });
+
 
 
 
