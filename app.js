@@ -1,87 +1,114 @@
 // Importando os módulos necessários
-const express = require('express');  // Framework web para Node.js
-const { spawn } = require('child_process');  // Para rodar comandos externos (yt-dlp)
-const path = require('path');  // Para lidar com caminhos de arquivos e diretórios
-const os = require('os');  // Para acessar informações do sistema operacional (como pasta "Música")
+const express = require('express');
+const { spawn } = require('child_process');
+const path = require('path');
+const os = require('os');
+const fs = require('fs');
+const util = require('util');
+const readdir = util.promisify(fs.readdir);
+const unlink = util.promisify(fs.unlink);
 
-// Criando a aplicação Express
 const app = express();
-const PORT = 3000;  // Definindo a porta em que o servidor vai rodar
+const PORT = 3000;
+const defaultFolder = path.join(os.homedir(), 'Music');
 
-// Definir a pasta "Música" do sistema para ser o local padrão de downloads
-const defaultFolder = path.join(os.homedir(), 'Music');  // Usando o diretório "Música" do sistema
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static('public'));
 
-// Middleware para interpretar dados do formulário (requisições POST)
-app.use(express.urlencoded({ extended: true }));  // Permite a análise do corpo das requisições URL-encoded
-app.use(express.static('public'));  // Serve arquivos estáticos da pasta 'public'
-
-// Rota para retornar a pasta padrão de downloads
 app.get('/default-folder', (req, res) => {
-  res.json({ defaultFolder: defaultFolder });  // Retorna o caminho da pasta "Música"
+  res.json({ defaultFolder: defaultFolder });
 });
 
-// Rota para processar o download de vídeo ou áudio
-app.post('/download', (req, res) => {
-  // Desestruturando os parâmetros recebidos do formulário
+app.post('/download', async (req, res) => {
   const { url, folder, format, playlist } = req.body;
-  const resolvedFolder = path.resolve(folder || defaultFolder);  // Resolve o caminho da pasta para onde o arquivo será salvo
+  const resolvedFolder = path.resolve(folder || defaultFolder);
 
-  // Argumentos do comando yt-dlp
-  const args = [
-    '--ffmpeg-location', 'C:/ffmpeg/bin',  // Caminho do ffmpeg, necessário para processamento de áudio e vídeo
-    '--cookies', 'cookies.txt',  // Cookies, se necessário para autenticação
-    '-o', `${resolvedFolder}/%(title)s.%(ext)s`,  // Padrão de saída para salvar o arquivo com o título e extensão correta
-    '-f',
-    format === 'mp3' ? 'bestaudio/best' : 'bestvideo+bestaudio',  // Define o formato do arquivo (audio ou vídeo)
+  // Se for uma playlist
+  if (playlist === '1') {
+    const extractArgs = [
+      '--flat-playlist',
+      '--print', 'url',
+      url
+    ];
 
-  ];
+    const urls = [];
 
-  // Se for vídeo, adiciona conversão para AVI
-  if (format === 'video') {
-    args.push('--recode-video', 'webm');
+    const ytDlpExtract = spawn('C:/yt-dlp/yt-dlp.exe', extractArgs);
+
+    ytDlpExtract.stdout.on('data', (data) => {
+      urls.push(...data.toString().trim().split(/\r?\n/));
+    });
+
+    ytDlpExtract.stderr.on('data', (data) => {
+      console.error('Erro ao extrair playlist:', data.toString());
+    });
+
+    ytDlpExtract.on('close', async () => {
+      if (urls.length === 0) {
+        return res.status(500).send('❌ Nenhum link extraído da playlist.');
+      }
+
+      try {
+        for (const singleUrl of urls) {
+          await processDownload(singleUrl, resolvedFolder, format);
+        }
+        res.status(200).send('✅ Todos os vídeos foram baixados e convertidos com sucesso!');
+      } catch (err) {
+        console.error('Erro geral:', err);
+        res.status(500).send('❌ Erro durante o processamento da playlist.');
+      }
+    });
+
+  } else {
+    try {
+      await processDownload(url, resolvedFolder, format, true); // força --no-playlist
+      res.status(200).send(`✅ Download de ${format === 'video' ? 'vídeo' : 'MP3'} concluído!`);
+    } catch (err) {
+      console.error('Erro:', err);
+      res.status(500).send('❌ Erro ao processar o vídeo.');
+    }
   }
+});
 
-  // Se a flag 'playlist' NÃO for marcada, adiciona a opção --no-playlist para baixar apenas o vídeo/áudio do link único
-  if (!playlist) {
-    args.push('--no-playlist');
-  }
+async function processDownload(videoUrl, resolvedFolder, format, forceNoPlaylist = false) {
+  return new Promise((resolve, reject) => {
+    const args = [
+      '--ffmpeg-location', 'C:/ffmpeg/bin',
+      '--cookies', 'cookies.txt',
+      '-o', `${resolvedFolder}/%(title)s.%(ext)s`,
+      '-f', format === 'mp3' ? 'bestaudio/best' : 'bestvideo+bestaudio'
+    ];
 
-  // A URL do vídeo ou áudio deve ser passada por último no comando
-  args.push(url);
+    if (format === 'video') {
+      args.push('--recode-video', 'webm');
+    }
 
-  // Executa o comando yt-dlp com os argumentos configurados
-  const ytDlp = spawn('C:/yt-dlp/yt-dlp.exe', args);
+    if (forceNoPlaylist) {
+      args.push('--no-playlist');
+    }
 
-  // Evento para capturar dados padrão (stdout) do processo
-  ytDlp.stdout.on('data', (data) => {
-    console.log(data.toString());  // Exibe a saída do yt-dlp no console
-  });
+    args.push(videoUrl);
 
-  // Evento para capturar erros (stderr) do processo
-  ytDlp.stderr.on('data', (data) => {
-    console.error(data.toString());  // Exibe erros do yt-dlp no console
-  });
+    const ytDlp = spawn('C:/yt-dlp/yt-dlp.exe', args);
 
-  // Evento acionado quando o processo termina
-  ytDlp.on('close', (code) => {
-    if (code === 0) {
+    ytDlp.stdout.on('data', (data) => console.log(data.toString()));
+    ytDlp.stderr.on('data', (data) => console.error(data.toString()));
+
+    ytDlp.on('close', async (code) => {
+      if (code !== 0) return reject(new Error('Erro no yt-dlp'));
+
       if (format === 'video') {
-        const fs = require('fs');
-        const { spawn } = require('child_process');
+        try {
+          const files = await readdir(resolvedFolder);
+          const videoFiles = files.filter(f => f.endsWith('.webm') || f.endsWith('.mkv') || f.endsWith('.mp4'));
 
-        fs.readdir(resolvedFolder, (err, files) => {
-          if (err) {
-            console.error('Erro ao ler a pasta:', err);
-            return res.status(500).send('Erro ao acessar arquivos.');
-          }
+          const newest = videoFiles.map(f => ({
+            name: f,
+            time: fs.statSync(path.join(resolvedFolder, f)).mtime.getTime()
+          })).sort((a, b) => b.time - a.time)[0];
 
-          const inputFile = files.find(f => f.endsWith('.webm') || f.endsWith('.mkv') || f.endsWith('.mp4'));
-          if (!inputFile) {
-            return res.status(500).send('Arquivo de vídeo não encontrado.');
-          }
-
-          const inputPath = path.join(resolvedFolder, inputFile);
-          const outputPath = path.join(resolvedFolder, path.parse(inputFile).name + '.avi');
+          const inputPath = path.join(resolvedFolder, newest.name);
+          const outputPath = path.join(resolvedFolder, path.parse(newest.name).name + '.avi');
 
           const ffmpeg = spawn('C:/ffmpeg/bin/ffmpeg.exe', [
             '-i', inputPath,
@@ -93,44 +120,32 @@ app.post('/download', (req, res) => {
             outputPath
           ]);
 
-          ffmpeg.stdout.on('data', (data) => {
-            console.log(`stdout: ${data}`);
-          });
+          ffmpeg.stdout.on('data', data => console.log(`stdout: ${data}`));
+          ffmpeg.stderr.on('data', data => console.error(`stderr: ${data}`));
 
-          ffmpeg.stderr.on('data', (data) => {
-            console.error(`stderr: ${data}`);
-          });
-
-          ffmpeg.on('close', (code) => {
-            if (code === 0) {
-              // ✅ Após conversão bem-sucedida, remove o arquivo original
-              fs.unlink(inputPath, (err) => {
-                if (err) {
-                  console.warn(`⚠️ Não foi possível remover o arquivo original: ${inputPath}`);
-                } else {
-                  console.log(`🗑️ Arquivo original removido: ${inputPath}`);
-                }
-              });
-
-              return res.status(200).send('✅ Download e conversão concluídos com sucesso!');
+          ffmpeg.on('close', async (ffCode) => {
+            if (ffCode === 0) {
+              try {
+                await unlink(inputPath);
+                console.log(`🗑️ Removido: ${inputPath}`);
+              } catch (err) {
+                console.warn(`⚠️ Falha ao remover ${inputPath}:`, err);
+              }
+              resolve();
             } else {
-              return res.status(500).send('❌ Erro na conversão para AVI.');
+              reject(new Error(`Erro ao converter ${newest.name}`));
             }
           });
-        });
+        } catch (err) {
+          reject(err);
+        }
       } else {
-        res.status(200).send('✅ Download de MP3 concluído!');
+        resolve();
       }
-    } else {
-      res.status(500).send('❌ Erro no download com yt-dlp.');
-    }
+    });
   });
+}
 
-
-
-});
-
-// Inicia o servidor Express na porta definida
 app.listen(PORT, () => {
-  console.log(`Servidor rodando em http://localhost:${PORT}`);  // Exibe mensagem de que o servidor está rodando
+  console.log(`Servidor rodando em http://localhost:${PORT}`);
 });
