@@ -73,10 +73,15 @@ app.post('/download', async (req, res) => {
 async function processDownload(videoUrl, resolvedFolder, format, forceNoPlaylist = false) {
   return new Promise((resolve, reject) => {
     const args = [
-      '--ffmpeg-location', 'C:/ffmpeg/bin',
-      '--cookies', 'cookies.txt',
-      '-o', `${resolvedFolder}/%(title)s.%(ext)s`,
-      '-f', format === 'mp3' ? 'bestaudio/best' : 'bestvideo+bestaudio'
+      '--ffmpeg-location', 'C:/ffmpeg/bin', // Informa o caminho para o executável do FFmpeg necessário para processar áudio/vídeo
+      '--cookies', 'cookies.txt', // Usa um arquivo de cookies exportado do navegador para acessar vídeos privados ou restritos
+      '-o', `${resolvedFolder}/%(title)s.%(ext)s`, // Define o nome e local de saída do arquivo baixado. Usa o título do vídeo como nome
+      '-f', format === 'mp3' ? 'bestaudio/best' : 'bestvideo+bestaudio', // Define o formato de download:
+      // '--merge-output-format', 'mp4',       // garante que seja mp4 (suporta legenda embutida)
+      // '--write-sub',                        // tenta baixar legenda manual (se existir)
+      // '--write-auto-sub',                   // baixa legenda automática (caso não tenha manual)
+      // '--sub-lang', 'pt.*',                 // legenda em português (todas variantes)
+      // '--embed-subs'                        // embute legenda no vídeo
     ];
 
     if (format === 'video') {
@@ -95,6 +100,7 @@ async function processDownload(videoUrl, resolvedFolder, format, forceNoPlaylist
     ytDlp.stderr.on('data', (data) => console.error(data.toString()));
 
     ytDlp.on('close', async (code) => {
+      console.log('yt-dlp finalizado com código:', code);
       if (code !== 0) return reject(new Error('Erro no yt-dlp'));
 
       if (format === 'video') {
