@@ -7,6 +7,8 @@ const fs = require('fs');
 const util = require('util');
 const readdir = util.promisify(fs.readdir);
 const unlink = util.promisify(fs.unlink);
+const ytdl = require('ytdl-core');
+const { exec } = require('child_process');
 
 const app = express();
 const PORT = 3000;
@@ -74,7 +76,7 @@ async function processDownload(videoUrl, resolvedFolder, format, forceNoPlaylist
   return new Promise((resolve, reject) => {
     const args = [
       '--ffmpeg-location', 'C:/ffmpeg/bin', // Informa o caminho para o executável do FFmpeg necessário para processar áudio/vídeo
-      '--cookies', 'cookies.txt', // Usa um arquivo de cookies exportado do navegador para acessar vídeos privados ou restritos
+      '--cookies', path.join(__dirname, 'cookies.txt'), // Usa um arquivo de cookies exportado do navegador para acessar vídeos privados ou restritos
       '-o', `${resolvedFolder}/%(title)s.%(ext)s`, // Define o nome e local de saída do arquivo baixado. Usa o título do vídeo como nome
       '-f', format === 'mp3' ? 'bestaudio/best' : 'bestvideo+bestaudio', // Define o formato de download:
       // '--merge-output-format', 'mp4',       // garante que seja mp4 (suporta legenda embutida)
@@ -151,6 +153,41 @@ async function processDownload(videoUrl, resolvedFolder, format, forceNoPlaylist
     });
   });
 }
+
+app.get('/video-info', (req, res) => {
+  const url = req.query.url;
+
+  if (!url) return res.status(400).json({ error: 'URL não fornecida.' });
+
+  const args = [
+    '--cookies', path.join(__dirname, 'cookies.txt'),
+    '--print', '%(title)s|%(thumbnail)s|%(duration_string)s',
+    '--no-playlist',
+    url
+  ];
+
+  let output = '';
+  const ytDlpInfo = spawn('C:/yt-dlp/yt-dlp.exe', args);
+
+  ytDlpInfo.stdout.on('data', data => {
+    output += data.toString();
+  });
+
+  ytDlpInfo.stderr.on('data', data => {
+    console.error('Erro yt-dlp:', data.toString());
+  });
+
+  ytDlpInfo.on('close', () => {
+    const [title, thumbnail, duration] = output.trim().split('|');
+    if (!title || !thumbnail) {
+      return res.status(500).json({ error: 'Erro ao obter informações do vídeo.' });
+    }
+
+    res.json({ title, thumbnail, duration });
+  });
+});
+
+
 
 app.listen(PORT, () => {
   console.log(`Servidor rodando em http://localhost:${PORT}`);
