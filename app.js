@@ -118,15 +118,28 @@ async function processDownload(videoUrl, resolvedFolder, format, forceNoPlaylist
           const inputPath = path.join(resolvedFolder, newest.name);
           const outputPath = path.join(resolvedFolder, path.parse(newest.name).name + '.avi');
 
+          // PRO ONIX
+          // const ffmpeg = spawn('C:/ffmpeg/bin/ffmpeg.exe', [
+          //   '-i', inputPath,
+          //   '-vf', 'scale=854:480',
+          //   '-vcodec', 'libxvid',
+          //   '-acodec', 'libmp3lame',
+          //   '-b:v', '1000k',
+          //   '-b:a', '192k',
+          //   outputPath
+          // ]);
+
+          // QUALIDADE HD
           const ffmpeg = spawn('C:/ffmpeg/bin/ffmpeg.exe', [
             '-i', inputPath,
-            '-vf', 'scale=854:480',
+            '-vf', 'scale=1280:720',       // HD (720p)
             '-vcodec', 'libxvid',
             '-acodec', 'libmp3lame',
-            '-b:v', '1000k',
+            '-b:v', '2500k',                // Vídeo com bitrate maior para HD
             '-b:a', '192k',
             outputPath
           ]);
+
 
           ffmpeg.stdout.on('data', data => console.log(`stdout: ${data}`));
           ffmpeg.stderr.on('data', data => console.error(`stderr: ${data}`));
